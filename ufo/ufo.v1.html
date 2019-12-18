@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UFOWorld v1</title>
+<style type="text/css">
+	body{
+		margin:40px auto;
+		max-width:650px;
+		line-height:1.6;
+		font-size:18px;
+		color:#444;
+		padding:0 10px;
+	}
+	h1,h2,h3 {line-height:1.2}
+</style>
+</head><body>
+		
+<header>
+	<h1>UFO</h1>
+	<aside>This version constructs the World. Open the console. WorldExample()</aside>
+</header>
+
+<div><canvas id="theCanvas" width="200" height="500">canvas</canvas></div>
+
+<script>
+//v1 Constructors
+var UFOWorld = function (ufo, aup, shots) {
+    this.ufo = ufo;
+    this.aup = aup;
+    this.shots = shots;
+};
+var AUP = function (position) {
+    this.position = position;	
+};
+var UFO = function (position) {
+	this.radius = 4;
+	this.position = position;
+};
+var MtShots = function () {};
+var Shot = function (position) {
+	this.position = position;
+};
+var Shots = function (first, rest) {
+    this.first = first;
+    this.rest = rest;
+};
+var WorldExample = function () {
+	return new UFOWorld(
+		new UFO({x:100, y:5}),
+		new AUP({x:100,y:500}),
+		new Shots(
+			new Shot({x:110, y:485}),
+	        new Shots(
+	        	new Shot({x:100, y:490}), 
+	        	new MtShots())));
+};
+window.onload = function () {
+    console.log("Let there be light!");
+    console.log(WorldExample());
+};
+</script>
+
+</body></html>
+

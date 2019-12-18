@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UFOWorld v3</title>
+<style type="text/css">
+	body{
+		margin:40px auto;
+		max-width:650px;
+		line-height:1.6;
+		font-size:18px;
+		color:#444;
+		padding:0 10px;
+	}
+	h1,h2,h3 {line-height:1.2}
+</style>
+</head><body>
+		
+<header>
+	<h1>UFO</h1>
+	<aside>This version changes the World over time.</aside>
+</header>
+
+<div><canvas id="theCanvas" width="200" height="500">canvas</canvas></div>
+
+<script>
+//v1 Constructors
+var UFOWorld = function (ufo, aup, shots) {
+    this.ufo = ufo;
+    this.aup = aup;
+    this.shots = shots;
+};
+var AUP = function (position) {
+    this.position = position;	
+};
+var UFO = function (position) {
+	this.radius = 4;
+	this.position = position;
+};
+var MtShots = function () {};
+var Shot = function (position) {
+	this.position = position;
+};
+var Shots = function (first, rest) {
+    this.first = first;
+    this.rest = rest;
+};
+var WorldExample = function () {
+	return new UFOWorld(
+		new UFO({x:100, y:5}),
+		new AUP({x:100,y:500}),
+		new Shots(
+			new Shot({x:110, y:485}),
+	        new Shots(
+	        	new Shot({x:100, y:490}), 
+	        	new MtShots())));
+};
+//v2 draw a snap shot of the World
+UFOWorld.prototype.HEIGHT = 500;
+UFOWorld.prototype.WIDTH = 200;
+UFOWorld.prototype.BACKG = "rgba(0,0,255,0.1)"; //blue
+UFOWorld.prototype.ctx = document.getElementById("theCanvas").getContext("2d");
+UFOWorld.prototype.draw = function () {
+	var ctx = this.ctx;
+    ctx.save();
+    ctx.clearRect(0,0,this.WIDTH,this.HEIGHT);
+    ctx.fillStyle = this.BACKG;
+    ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
+    ctx.restore();
+    return this.ufo.draw(ctx) && this.aup.draw(ctx) && this.shots.draw(ctx);
+};
+AUP.prototype.color = "rgba(255,0,255,1)"; //purple
+AUP.prototype.draw = function (ctx) {
+	console.log("drawing AUP");
+	ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.position.x-2,this.position.y-8,4,8);
+	ctx.restore();
+	return true;
+};
+UFO.prototype.color = "rgba(0,255,0,1)"; //green
+UFO.prototype.draw = function (ctx) {
+	console.log("drawing UFO");
+    ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.position.x,this.position.y,this.radius,0,Math.PI * 2,false);
+    ctx.fill();
+    ctx.fillRect(this.position.x-9, this.position.y-1,18,2);
+	ctx.restore()
+	;return true;
+};
+Shot.prototype.color = "rgba(255,0,0,1)"; //red
+MtShots.prototype.draw = function (ctx) { return true; };
+Shot.prototype.draw = function (ctx) {
+	ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.position.x-1,this.position.y-5,2,5);
+	ctx.restore();
+	return true;
+};
+Shots.prototype.draw = function (ctx) {
+	return this.first.draw(ctx) && this.rest.draw(ctx);
+};
+//v3 stuff
+//world changes over time until the end
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+UFOWorld.prototype.move = function () {
+	return new UFOWorld(this.ufo.move(this), this.aup, this.shots.move(this));//aup moves on key down
+};
+UFOWorld.prototype.endOfWorld = function () {
+	var s = "";
+	if (this.ufo.landed(this)) s = "You lost.";
+	if (this.shots.hit(this.ufo)) s ="You won.";
+	writeInCenter(s, this.ctx, this.WIDTH, this.HEIGHT);
+	return this;
+};
+UFOWorld.prototype.isOver = function () {
+	return this.ufo.landed(this) || this.shots.hit(this.ufo);
+};
+AUP.prototype.move = function (w, direction) {
+	console.log("direction", direction);
+	if (direction === "Left") {
+		if (this.position.x-1 < 0) return new AUP({x:0, y:this.position.y});
+		return new AUP({x:this.position.x-1, y:this.position.y});
+	}
+	if (direction === "Right") {
+		if (w.WIDTH < this.position.x + 1) return new AUP({x:w.WIDTH, y:this.position.y});
+		return new AUP({x:this.position.x+1, y:this.position.y});
+	}
+	return this;
+};
+UFO.prototype.landed = function (w) {
+	return w.HEIGHT <= this.position.y; // ufo is beyond the height of world
+};
+UFO.prototype.closeToGround = function (w) {
+	return w.HEIGHT - this.position.y <= 3; // the gap btw is small
+};
+UFO.prototype.move = function (w) {
+	var getRandomIntInclusive = function (min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+    };
+    var zigzag = function (x, width) {
+    	return (x + getRandomIntInclusive(-5, 5)) % width;
+    };
+    if (this.landed(w)) return this;	
+    if (this.closeToGround(w)) return new UFO({x:this.position.x, y:w.HEIGHT});
+    return new UFO({x:zigzag(this.position.x, w.WIDTH), y:this.position.y+3});
+};
+MtShots.prototype.move = function (w) { return this; };
+MtShots.prototype.hit = function (ufo) { return false; };
+Shot.prototype.move = function (w) {
+	return new Shot({x:this.position.x, y:this.position.y-3});
+};
+Shot.prototype.hit = function (ufo) {
+	var dx = ufo.position.x - this.position.x,
+	    dy = ufo.position.y - this.position.y,
+	    distance = Math.sqrt(dx*dx+dy*dy);
+	console.log(distance, ufo.radius);
+	return distance < ufo.radius;
+};
+Shots.prototype.move = function (w) {
+	return new Shots(this.first.move(w), this.rest.move(w));
+};
+Shots.prototype.hit = function (ufo) {
+	return this.first.hit(ufo) || this.rest.hit(ufo);
+};
+var bigbang = function (wld, sec) {
+	window.world = wld;
+	window.interval = setInterval(function () {
+		if (window.world.isOver()) {
+			window.world.endOfWorld();
+			clearInterval(window.world)
+		} else {
+			window.world.draw();
+			window.world = window.world.move.bind(window.world)();
+		}
+	}, sec*1000);
+};
+window.onload = function () {
+    console.log("Let there be light!");
+    bigbang(WorldExample(), 0.1);
+};
+</script>
+
+</body></html>
+
