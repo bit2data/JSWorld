@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traffic Light 2</title>
+<style type="text/css">
+	body{
+		margin:40px auto;
+		max-width:650px;
+		line-height:1.6;
+		font-size:18px;
+		color:#444;
+		padding:0 10px;
+	}
+	h1,h2,h3 {line-height:1.2}
+</style>
+</head><body>
+	
+<div><canvas id="theCanvas" width="200" height="500">canvas</canvas></div>
+
+<script>
+//not used here
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+var Bulb = function (rgb, on, y) {
+	this.rgb = rgb;
+	this.on = on;
+	this.y  = y;
+};
+Bulb.prototype.draw = function (ctx) {
+	console.log("drawing Bulb", this.rgb);
+	ctx.save();
+	ctx.fillStyle = this.rgb;
+  ctx.beginPath();
+  ctx.arc(100,this.y,20,0,Math.PI * 2,false);
+  this.on ? ctx.fill() : ctx.stroke();
+	ctx.restore();
+	return true;
+};
+var World = function (color, sec) {
+    this.color = color;
+    this.sec = sec;
+    this.green = new Bulb('rgba(102,204,0,1)', 'green' === color, 50);
+    this.yellow = new Bulb('rgba(255,255,0,1)', 'yellow' === color, 100);
+    this.red = new Bulb('rgba(255,0,0,1)', 'red' === color, 150);
+};
+World.prototype.BACKG = "rgba(255,255,255,0.1)"; //black
+World.prototype.HEIGHT = 500;
+World.prototype.WIDTH = 200;
+World.prototype.ctx = document.getElementById("theCanvas").getContext("2d");
+World.prototype.draw = function () {
+	var ctx = this.ctx;
+    ctx.save();
+    ctx.clearRect(0,0,this.WIDTH,this.HEIGHT);
+    ctx.fillStyle = this.BACKG;
+    ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
+	ctx.restore();
+	return this.green.draw(ctx) && this.yellow.draw(ctx) && this.red.draw(ctx);
+};
+World.prototype.endOfWorld = function () { return this; }
+World.prototype.isOver = function () { return false; };
+World.prototype.move = function () {
+	console.log("onTick:", this);
+	if ('green' === this.color) {
+		if (this.sec < 2) return new World(this.color, this.sec+1);
+		return new World('yellow', 0);
+	}
+	if ('yellow' === this.color) {
+		return new World('red', 0);
+	}
+	//red
+	if (this.sec < 2) return new World(this.color, this.sec+1);
+	return new World('green', 0);
+};
+World.prototype.onKeyEvent = function (evt) {
+	console.log("onKeyEvent:", evt.key, this);
+	if (-1 < evt.key.indexOf("ArrowDown")) {
+		if ('green' === this.color)  return new World('yellow', 0);
+		if ('yellow' === this.color) return new World('red', 0);
+		//red, we presume
+		return new World('green', 0);	
+	}
+	return this;
+};
+var bigbang = function (world, sec) {
+	window.world = world;
+	window.interval = setInterval(function () {
+    if (window.world.isOver()) {
+      window.world.endOfWorld();
+      clearInterval(window.interval);
+    } else {
+      window.world.draw();
+      window.world = window.world.move.bind(window.world)();
+    }
+	}, sec*1000);
+	document.addEventListener("keydown", function (evt) { 
+		window.world = window.world.onKeyEvent.bind(window.world)(evt); 
+	});
+};
+window.onload = function () {
+    console.log("Let there be light!");
+    bigbang(new World('green', 0), 1);
+};
+</script>
+
+</body></html>
+
