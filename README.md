@@ -1,2 +1,2 @@
 # JSWorld
-Games or simulations written in JavaScript
+Games and simulations written in JavaScript
