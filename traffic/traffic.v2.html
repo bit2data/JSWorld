@@ -65,7 +65,7 @@ window.onload = function() {
 	console.log(new World("green", 0).draw());
 };
 //v3 world changes over time
-World.prototype.endOfWorld = function () { return this; }
+World.prototype.endOfWorld = function () { return new World("black", 0); }
 World.prototype.isOver = function () { return false; };
 World.prototype.move = function () {
 	console.log("onTick:", this);
@@ -94,12 +94,12 @@ World.prototype.move = function () {
 };
 var bigbang = function (world, sec) {
 	window.world = world;
+	window.world.draw();
 	window.interval = setInterval(function () {
     if (window.world.isOver()) {
-      window.world.endOfWorld();
+      window.world = window.world.endOfWorld();
       clearInterval(window.interval);
     } else {
-      window.world.draw();
       window.world = window.world.move.bind(window.world)();
     }
 	}, sec*1000);
