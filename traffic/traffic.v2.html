@@ -96,12 +96,13 @@ var bigbang = function (world, sec) {
 	window.world = world;
 	window.world.draw();
 	window.interval = setInterval(function () {
-    if (window.world.isOver()) {
-      window.world = window.world.endOfWorld();
-      clearInterval(window.interval);
-    } else {
-      window.world = window.world.move.bind(window.world)();
-    }
+		window.world.draw();
+	    if (window.world.isOver()) {
+	      window.world = window.world.endOfWorld();
+	      clearInterval(window.interval);
+	    } else {
+	      window.world = window.world.move.bind(window.world)();
+	    }
 	}, sec*1000);
 	if (window.world) {
 	  document.addEventListener("keydown", function (evt) { 
