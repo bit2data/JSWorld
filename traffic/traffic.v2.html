@@ -19,16 +19,24 @@
 <div><canvas id="theCanvas" width="200" height="500">canvas</canvas></div>
 
 <script>
-//not used here
-var writeInCenter = function (txt, ctx, width, height) {
-    var txtwidth = ctx.measureText(txt).width;
-    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
-};
+//v1 constructors
 var Bulb = function (rgb, on, y) {
 	this.rgb = rgb;
 	this.on = on;
 	this.y  = y;
 };
+var World = function (color, sec) {
+    this.color = color;
+    this.sec = sec;
+    this.green = new Bulb('rgba(102,204,0,1)', 'green' === color, 50);
+    this.yellow = new Bulb('rgba(255,255,0,1)', 'yellow' === color, 100);
+    this.red = new Bulb('rgba(255,0,0,1)', 'red' === color, 150);
+};
+window.onload = function() {
+	console.log("loading world ...");
+	console.log(new World("green", 0));
+};
+//v2 draw a snap shot of the world
 Bulb.prototype.draw = function (ctx) {
 	console.log("drawing Bulb", this.rgb);
 	ctx.save();
@@ -39,14 +47,7 @@ Bulb.prototype.draw = function (ctx) {
 	ctx.restore();
 	return true;
 };
-var World = function (color, sec) {
-    this.color = color;
-    this.sec = sec;
-    this.green = new Bulb('rgba(102,204,0,1)', 'green' === color, 50);
-    this.yellow = new Bulb('rgba(255,255,0,1)', 'yellow' === color, 100);
-    this.red = new Bulb('rgba(255,0,0,1)', 'red' === color, 150);
-};
-World.prototype.BACKG = "rgba(255,255,255,0.1)"; //black
+World.prototype.BACKG = "rgba(255,255,255,0.1)"; //white
 World.prototype.HEIGHT = 500;
 World.prototype.WIDTH = 200;
 World.prototype.ctx = document.getElementById("theCanvas").getContext("2d");
@@ -59,6 +60,11 @@ World.prototype.draw = function () {
 	ctx.restore();
 	return this.green.draw(ctx) && this.yellow.draw(ctx) && this.red.draw(ctx);
 };
+window.onload = function() {
+	console.log("loading world ...");
+	console.log(new World("green", 0).draw());
+};
+//v3 world changes over time
 World.prototype.endOfWorld = function () { return this; }
 World.prototype.isOver = function () { return false; };
 World.prototype.move = function () {
@@ -73,16 +79,18 @@ World.prototype.move = function () {
 	//red
 	if (this.sec < 2) return new World(this.color, this.sec+1);
 	return new World('green', 0);
-};
-World.prototype.onKeyEvent = function (evt) {
-	console.log("onKeyEvent:", evt.key, this);
-	if (-1 < evt.key.indexOf("ArrowDown")) {
-		if ('green' === this.color)  return new World('yellow', 0);
-		if ('yellow' === this.color) return new World('red', 0);
-		//red, we presume
-		return new World('green', 0);	
-	}
-	return this;
+	//
+	return {
+		'green': function(sec) {
+			if (sec < 2)  return new World('green', sec+1);
+			return new World('yellow', 0);
+		},
+		'yellow': function(sec) { return new World('red', 0)},
+		'red': function(sec) {
+			if (sec < 2) return new World('red', sec+1);
+			return new World('green', 0);
+		}
+	}[this.color](this.sec);
 };
 var bigbang = function (world, sec) {
 	window.world = world;
@@ -95,15 +103,23 @@ var bigbang = function (world, sec) {
       window.world = window.world.move.bind(window.world)();
     }
 	}, sec*1000);
-	document.addEventListener("keydown", function (evt) { 
-		window.world = window.world.onKeyEvent.bind(window.world)(evt); 
-	});
+	if (window.world) {
+	  document.addEventListener("keydown", function (evt) { 
+	    window.world = window.world.onKeyEvent.bind(window.world)(evt); 
+	  });
+	}
 };
 window.onload = function () {
     console.log("Let there be light!");
     bigbang(new World('green', 0), 1);
 };
+//v4 optional key events
+World.prototype.onKeyEvent = function (evt) {
+	console.log("onKeyEvent:", evt.key, this);
+	if (-1 < evt.key.indexOf("ArrowDown")) return new World(this.color, this.sec-1);	
+	if (-1 < evt.key.indexOf("ArrowUp")) return new World(this.color, this.sec+1);	
+	return this;
+};
 </script>
-
 </body></html>
 
