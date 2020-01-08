@@ -37,8 +37,8 @@ var Snake = function (dir, segs) {
     this.segs = segs;//[Seg]
 };
 var Food = function (loc) {
-    this.loc = {x:randInt(Pit.SIZE), y:randInt(Pit.SIZE)};
-    if (loc) this.loc = loc;
+    this.x = loc ? loc.x : randInt(Pit.SIZE);
+    this.y = loc ? loc.y : randInt(Pit.SIZE);
 };
 var randInt = function (max) {
   return Math.floor(Math.random() * Math.floor(max));
@@ -102,8 +102,8 @@ Food.prototype.draw = function (ctx) {
 	    ctx.fillStyle = "rgba(0,255,0,1)";
         ctx.beginPath();
         //translate the center of the circle to the middle
-        ctx.arc(this.loc.x*Seg.SIZE+Seg.SIZE/2,
-        this.loc.y*Seg.SIZE+Seg.SIZE/2,
+        ctx.arc(this.x*Seg.SIZE+Seg.SIZE/2,
+        this.y*Seg.SIZE+Seg.SIZE/2,
         Seg.SIZE/2,0,Math.PI * 2,false);
         ctx.fill();
     ctx.restore();
@@ -118,13 +118,22 @@ Pit.prototype.onKeyEvent = function (evt) {
     }
     //v4 
     //before implementing 'world changes on tick'
+    //do some manual simulation to aid debug
     if ("s" === evt.key) {
         console.log("slither snake");
         return new Pit(this.snake.slither(), this.foods);
     }
-    if ("g" === evt.key) {
+     if ("g" === evt.key) {
         console.log("grow snake");
         return new Pit(this.snake.grow(), this.foods);
+    }
+   if ("e" === evt.key) {
+        console.log("eat food");
+        var edible = this.snake.can_eat(this.foods);
+        if (-1 < edible) {
+            return new Pit(this.snake.grow(), this.snake.eat(this.foods, edible));
+        }
+        return new Pit(this.snake, this.foods);
     }
     return this;
 };
@@ -170,7 +179,7 @@ var Seg = function (xy) {
 };
 Seg.SIZE = SEG_SIZE;
 
-//v4 slither, grow
+//v4 slither, eat, and grow
 
 // -> Snake
 Snake.prototype.slither = function () {
@@ -183,6 +192,18 @@ Snake.prototype.grow = function () {
     console.log("add a segment to the front of segs");
     return new Snake(this.dir,
     [this.next_head()].concat(this.segs));
+};
+// Foods -> Int
+// index of the food that can be eaten i.e. food location and the head location are identical
+// -1 means there is no food 
+Snake.prototype.can_eat = function (foods) {
+    return foods.findIndex(food => food.x === this.head().x && food.y === this.head().y);
+};
+// Foods Int -> Foods
+Snake.prototype.eat = function (foods, i) {
+    return foods.filter((food, index) => {
+        return i !== index;
+    });
 };
 // -> Seg
 Snake.prototype.next_head = function () {
@@ -218,9 +239,16 @@ var snake0 = new Snake("up", [
     new Seg({x:1, y:2}), 
     new Seg({x:1, y:3}) 
 ]);
+var edible = [
+    new Food(),
+    new Food({x:1, y:1}),
+    new Food()
+];
 var tests = function () {
     console.assert(snake0.segs.length === snake0.slither().segs.length, "size should not change after slither");
     console.assert(snake0.segs.length+1 === snake0.grow().segs.length, "size should grow after grow");
+    console.assert(1 === snake0.can_eat(edible), "edible");
+    console.assert(2 === snake0.eat(edible, snake0.can_eat(edible)).length, "left over");
 };
 var canvas = document.getElementById("theCanvans");
 var ctx = canvas.getContext("2d");
