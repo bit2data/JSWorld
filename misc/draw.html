@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draw</title>
+<style type="text/css">
+body{
+	margin:40px auto;
+	max-width:650px;
+	line-height:1.6;
+	font-size:18px;
+	color:#444;
+	padding:0 10px;
+}
+h1,h2,h3 {line-height:1.2}
+#container {
+	position: relative;
+}
+canvas {
+    display:block;
+}	
+</style>
+</head><body>
+		
+<header>
+	<h1>Draw</h1>
+	<aside></aside>
+</header>
+
+<div id="container"></div>
+
+<script>
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+var makeCanvas = function (width, height) {
+	var container = document.getElementById("container");
+	var canvas = document.createElement("canvas");
+	canvas.width = width;
+	canvas.height = height;
+	container.appendChild(canvas);
+	return canvas;
+};
+var rectangle = function (width, height, color, fill) {
+	color = color ? color : "black";
+	fill = fill ? true : false;
+	return {
+		bounds: function (ul) {
+			ul = ul ? Object.assign({}, ul) : {x:0, y:0};
+			return {
+				l: ul.x,
+				r: ul.x + width,
+				t: ul.y,
+				b: ul.y + height 
+			};
+		},
+		draw: function (ctx, ul) {
+			console.log("drawing rectangle");
+			ctx = ctx ? ctx : makeCanvas(width + 10, height + 10).getContext("2d");
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(ul.x, ul.y, width, height);
+			if (fill) {
+				ctx.fillStyle = color;
+				ctx.fill();
+			} else {
+				ctx.strokeStyle = color;
+				ctx.stroke();
+			}
+			return this;
+		}
+	};
+};
+var circle = function (radius, color, fill) {
+	color = color ? color : "black";
+	fill = fill ? true : false;
+	
+	return {
+		bounds: function (ul) {
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			return {
+				l: ul.x,
+				r: ul.x + radius * 2,
+				t: ul.y,
+				b: ul.y + radius * 2
+			};
+		},	
+		draw: function (ctx, ul) {
+			ctx = ctx ? ctx : makeCanvas(radius * 2 + 10, radius * 2 + 10).getContext("2d");
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			// calculate the bounds from upperLeft and radius.
+			// find the center and draw self in ctx
+			console.log("drawing circle");
+			ctx.save();
+			   ctx.beginPath();
+			   ctx.arc(ul.x+radius, ul.y+radius, radius, 0, Math.PI * 2, false);
+			   if (fill) {
+					ctx.fillStyle = color;
+					ctx.fill();					
+			   } else {
+			   		ctx.strokeStyle= color;
+			   		ctx.stroke();
+			   }
+			ctx.restore();
+			return this;
+		}
+	};
+};
+var hAppend = function (...restArgs) {
+	var bounds, width = 0, height = 0, curr = 0, shapes = restArgs;
+	//caculate the needed space, ie sum of width and max height
+	while (curr < shapes.length) {
+		bounds = shapes[curr].bounds();
+		width += bounds.r - bounds.l;
+		height = Math.max(height, bounds.b - bounds.t);
+		curr += 1;
+	}
+	return {
+		bounds: function (ul) {
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			return {
+				l: ul.x,
+				r: ul.x + width,
+				t: ul.y,
+				b: ul.y + height
+			};
+		},
+		draw: function (ctx, ul) {
+			ctx = ctx ? ctx : makeCanvas(width + 10, height + 10).getContext("2d");
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			var bounds, curr = 0;
+			while (curr < shapes.length) {
+				bounds = shapes[curr].draw(ctx, ul).bounds(ul);
+				ul.x += (bounds.r - bounds.l);
+				curr += 1;
+			}
+			return this;
+		}
+	}
+};
+var vAppend = function (...restArgs) {
+	var bounds, width = 0, height = 0, curr = 0, shapes = restArgs;
+	//caculate the needed space, ie sum of width and max height
+	while (curr < shapes.length) {
+		bounds = shapes[curr].bounds();
+		width = Math.max(width, bounds.r - bounds.l);
+		height += bounds.b - bounds.t;
+		curr += 1;
+	}
+	return {
+		bounds: function (ul) {
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			return {
+				l: ul.x,
+				r: ul.x + width,
+				t: ul.y,
+				b: ul.y + height
+			};
+		},
+		draw: function (ctx, ul) {
+			ctx = ctx ? ctx : makeCanvas(width + 10, height + 10).getContext("2d");
+			ul = ul ? Object.assign({},ul) : {x:0, y:0};
+			var bounds, curr = 0;
+			while (curr < shapes.length) {
+				bounds = shapes[curr].draw(ctx, ul).bounds(ul);
+				ul.y += (bounds.b - bounds.t);
+				curr += 1;
+			}
+			return this;
+		}
+	}
+};
+window.onload = function () {
+	console.log("ready to roll");
+};
+</script>
+
+</body></html>
+
