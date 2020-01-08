@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<title>Snake</title>
+<style type="text/css">
+</style>
+</head>
+<body>
+<div id="mainContent" align="center">
+ <canvas width="500" height="500" id="theCanvans" style="border: 1px solid black;">canvas</canvas>
+</div>
+<script>
+// draw rectangle (to be snake) and circle (to be food)
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+var drawRect = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(255,165,0,1)";
+	    ctx.rect(0,0,10,10);
+	    ctx.fill();
+    ctx.restore();
+};
+var drawCircle = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(0,255,0,1)";
+      ctx.beginPath();
+      ctx.arc(100,100,5,0,Math.PI * 2,false);
+      ctx.fill();
+    ctx.restore();
+};
+window.onload = function () {
+  console.log("ready");
+  var ctx = document.getElementById("theCanvans").getContext("2d");
+  drawRect(ctx);
+  drawCircle(ctx);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<title>Snake</title>
+<style type="text/css">
+</style>
+</head>
+<body>
+<div id="mainContent" align="center">
+ <canvas width="300" height="300" id="theCanvans" style="border: 1px solid black;">canvas</canvas>
+</div>
+<script>
+//v2 Constructors with Draw to see with eyes
+//Global Constants
+var SIZE = 30;// think SIZE by SIZE grid
+var SEG_SIZE = 10;//in pix. SIZE*Seg.SIZE == width, height of canvas
+var WIDTH = SIZE * SEG_SIZE;
+var HEIGHT = SIZE * SEG_SIZE;
+var DIRECTIONS = new Set(["up", "down", "left", "right"]);
+// Constructors
+var Pit = function (snake, foods) {
+    this.snake = snake;
+    if (foods === undefined || foods.length == 0) throw "no food";
+    this.foods = foods; // [Food]
+};
+Pit.SIZE = SIZE;
+var Snake = function (dir, segs) {
+    if (DIRECTIONS.has(dir)) {
+        this.dir = dir;// one of "up" "down" "left" "right"
+    } else {
+        throw "invalid direction";
+    }
+    if (segs === undefined || segs.length == 0) {
+        throw "empty segs";
+    }
+    this.segs = segs;//[Seg]
+};
+var Food = function (loc) {
+    this.loc = {x:randInt(Pit.SIZE), y:randInt(Pit.SIZE)};
+    if (loc) this.loc = loc;
+};
+var randInt = function (max) {
+  return Math.floor(Math.random() * Math.floor(max));
+};
+// Draw to Canvas
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+Pit.WIDTH = WIDTH;
+Pit.HEIGHT = HEIGHT;
+Pit.prototype.draw = function (ctx) {
+    ctx.save();
+        this.snake.draw(ctx);
+        this.foods.forEach(function (food) {
+            food.draw(ctx);
+        });
+    ctx.restore();
+};
+Snake.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(255,165,0,1)";
+        this.segs.forEach(function (seg, i) {
+            ctx.rect(seg.x*Seg.SIZE, seg.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+            ctx.fill();
+            ctx.save();
+            ctx.fillStyle = 'black';
+            ctx.fillText("0"+i,seg.x*Seg.SIZE, seg.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+            ctx.restore();
+        });
+        var head = this.segs[0];
+        ctx.clearRect(head.x*Seg.SIZE, head.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+        ctx.beginPath();
+        ctx.fillStyle = 'black';
+        if (this.dir === "up") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        if (this.dir === "down") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+        }
+        if (this.dir === "right") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+        }
+        if (this.dir === "left") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        ctx.closePath();
+        ctx.fill();
+    ctx.restore();
+};
+Food.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(0,255,0,1)";
+        ctx.beginPath();
+        //translate the center of the circle to the middle
+        ctx.arc(this.loc.x*Seg.SIZE+Seg.SIZE/2,
+        this.loc.y*Seg.SIZE+Seg.SIZE/2,
+        Seg.SIZE/2,0,Math.PI * 2,false);
+        ctx.fill();
+    ctx.restore();
+};
+//v3 key pressed -> change direction
+//v4 handle extra keys for DEBUG
+// s -> slither, g -> grow
+Pit.prototype.onKeyEvent = function (evt) {
+    console.log(evt.key, this);
+    if (-1 < evt.key.indexOf("Arrow")) {
+        return this.direct_snake(evt.key.substring("Arrow".length).toLowerCase());
+    }
+    //v4 
+    //before implementing 'world changes on tick'
+    if ("s" === evt.key) {
+        console.log("slither snake");
+        return new Pit(this.snake.slither(), this.foods);
+    }
+    if ("g" === evt.key) {
+        console.log("grow snake");
+        return new Pit(this.snake.grow(), this.foods);
+    }
+    return this;
+};
+// String -> Pit
+// "up"   -> Pit(Snake("up", [Seg]), [Food])
+Pit.prototype.direct_snake = function (dir) {
+    console.log("change direction to", dir);
+    if (this.snake.dir === {"up":"down", "left":"right",
+    "down":"up","right":"left"}[dir] && this.snake.has_body()) {
+        return this.stop();
+    } 
+    return new Pit(this.snake.change_dir(dir), this.foods);
+};
+// -> Pit
+Pit.prototype.stop = function () {
+    console.log("stop this", this);
+    return this;
+};
+// String -> Snake
+// "up" -> Snake("up", [Seg])
+Snake.prototype.change_dir = function (dir) {
+    return new Snake(dir, this.segs);
+};
+// -> Seg
+Snake.prototype.head = function () {
+    return this.segs[0];
+};
+// -> [Seg]
+Snake.prototype.body = function () {
+    return this.segs.slice(1);
+};
+// -> Bool
+Snake.prototype.has_body = function () {
+    return 1 < this.segs.length;// first one is head
+};
+// -> [Seg]
+Snake.prototype.all_but_last = function () {
+    return this.segs.slice(0,-1);
+};
+var Seg = function (xy) {
+    this.x = xy.x;
+    this.y = xy.y;
+};
+Seg.SIZE = SEG_SIZE;
+
+//v4 slither, grow
+
+// -> Snake
+Snake.prototype.slither = function () {
+    console.log("add a segment in the right direction to the butfirst of snake");
+    return new Snake(this.dir,
+    [this.next_head()].concat(this.all_but_last()));
+};
+// -> Snake
+Snake.prototype.grow = function () {
+    console.log("add a segment to the front of segs");
+    return new Snake(this.dir,
+    [this.next_head()].concat(this.segs));
+};
+// -> Seg
+Snake.prototype.next_head = function () {
+    return this.head()[this.dir]();
+};
+// -> Seg
+Seg.prototype.up = function () {
+    return new Seg({
+        x:this.x,
+        y:this.y-1
+    });
+};
+Seg.prototype.down = function () {
+    return new Seg({
+        x:this.x,
+        y:this.y+1
+    });
+};
+Seg.prototype.left = function () {
+    return new Seg({
+        x:this.x-1,
+        y:this.y
+    });
+};
+Seg.prototype.right = function () {
+    return new Seg({
+        x:this.x+1,
+        y:this.y
+    });
+};
+var snake0 = new Snake("up", [
+    new Seg({x:1, y:1}), 
+    new Seg({x:1, y:2}), 
+    new Seg({x:1, y:3}) 
+]);
+var tests = function () {
+    console.assert(snake0.segs.length === snake0.slither().segs.length, "size should not change after slither");
+    console.assert(snake0.segs.length+1 === snake0.grow().segs.length, "size should grow after grow");
+};
+var canvas = document.getElementById("theCanvans");
+var ctx = canvas.getContext("2d");
+var main = function () {
+    console.log("ready");
+    console.assert(canvas.width === Pit.WIDTH, "incorrect WIDTH");
+    console.assert(canvas.height === Pit.HEIGHT, "incorrect HEIGHT");
+    tests();
+    var world = new Pit(
+        snake0,
+        [new Food(), new Food(), new Food(), new Food()]
+    );
+    world.draw(ctx);
+    document.addEventListener("keydown", function (evt) {
+        console.log(evt);
+        world = world.onKeyEvent(evt);
+        ctx.clearRect(0,0,WIDTH,HEIGHT);
+        world.draw(ctx);
+    });
+};
+window.onload = main;
+</script>
+</body>
+</html>

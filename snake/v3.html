@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<title>Snake</title>
+<style type="text/css">
+</style>
+</head>
+<body>
+<div id="mainContent" align="center">
+ <canvas width="300" height="300" id="theCanvans" style="border: 1px solid black;">canvas</canvas>
+</div>
+<script>
+//v2 Constructors with Draw to see with eyes
+//Global Constants
+var SIZE = 30;// think SIZE by SIZE grid
+var SEG_SIZE = 10;//in pix. SIZE*Seg.SIZE == width, height of canvas
+var DIRECTIONS = new Set(["up", "down", "left", "right"]);
+// Constructors
+var Pit = function (snake, foods) {
+    this.snake = snake;
+    if (foods === undefined || foods.length == 0) throw "no food";
+    this.foods = foods; // [Food]
+};
+Pit.SIZE = SIZE;
+var Snake = function (dir, segs) {
+    if (DIRECTIONS.has(dir)) {
+        this.dir = dir;// one of "up" "down" "left" "right"
+    } else {
+        throw "invalid direction";
+    }
+    if (segs === undefined || segs.length == 0) {
+        throw "empty segs";
+    }
+    this.segs = segs;//[Seg]
+};
+var Food = function (loc) {
+    this.loc = {x:randInt(Pit.SIZE), y:randInt(Pit.SIZE)};
+    if (loc) this.loc = loc;
+};
+var randInt = function (max) {
+  return Math.floor(Math.random() * Math.floor(max));
+};
+// Draw to Canvas
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+Pit.prototype.draw = function (ctx) {
+    ctx.save();
+        this.snake.draw(ctx);
+        this.foods.forEach(function (food) {
+            food.draw(ctx);
+        });
+    ctx.restore();
+};
+Snake.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(255,165,0,1)";
+        this.segs.forEach(function (seg) {
+            ctx.rect(seg.x*Seg.SIZE, seg.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+            ctx.fill();
+        });
+        var head = this.segs[0];
+        ctx.clearRect(head.x*Seg.SIZE, head.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+        ctx.beginPath();
+        ctx.fillStyle = 'black';
+        if (this.dir === "up") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        if (this.dir === "down") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+        }
+        if (this.dir === "right") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+        }
+        if (this.dir === "left") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        ctx.closePath();
+        ctx.fill();
+    ctx.restore();
+};
+Food.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(0,255,0,1)";
+        ctx.beginPath();
+        //translate the center of the circle to the middle
+        ctx.arc(this.loc.x*Seg.SIZE+Seg.SIZE/2,
+        this.loc.y*Seg.SIZE+Seg.SIZE/2,
+        Seg.SIZE/2,0,Math.PI * 2,false);
+        ctx.fill();
+    ctx.restore();
+};
+//v3 key pressed -> change direction
+Pit.prototype.onKeyEvent = function (evt) {
+    console.log(evt.key, this);
+    if (-1 < evt.key.indexOf("Arrow")) {
+        return this.change_dir(evt.key.substring("Arrow".length).toLowerCase());
+    }
+    return this;
+};
+// String -> Pit
+// "up"   -> Pit(Snake("up", [Seg]), [Food])
+Pit.prototype.change_dir = function (dir) {
+    console.log("change direction to", dir);
+    if (this.snake.dir === {"up":"down", "left":"right",
+    "down":"up","right":"left"}[dir] && this.snake.has_body()) {
+        return this.stop();
+    } 
+    return new Pit(this.snake.change_dir(dir), this.foods);
+};
+// -> Pit
+Pit.prototype.stop = function () {
+    console.log("stop this", this);
+    return this;
+};
+// String -> Snake
+// "up" -> Snake("up", [Seg])
+Snake.prototype.change_dir = function (dir) {
+    return new Snake(dir, this.segs);
+};
+// -> Seg
+Snake.prototype.head = function () {
+    return this.segs[0];
+};
+// -> [Seg]
+Snake.prototype.body = function () {
+    return this.segs.slice(1);
+};
+// -> Bool
+Snake.prototype.has_body = function () {
+    return 1 < this.segs.length;// first one is head
+};
+// -> [Seg]
+Snake.prototype.butlast = function () {
+    return this.segs.slice(0,-1);
+};
+var Seg = function (xy) {
+    this.x = xy.x;
+    this.y = xy.y;
+};
+Seg.SIZE = SEG_SIZE;
+var main = function () {
+    console.log("ready");
+    var ctx = document.getElementById("theCanvans").getContext("2d");
+    var world = new Pit(
+        new Snake("up", [new Seg({x:1, y:1}), new Seg({x:1, y:2}), new Seg({x:1, y:3})]), 
+        [new Food(), new Food(), new Food(), new Food()]
+    );
+    world.draw(ctx);
+    document.addEventListener("keydown", function (evt) {
+        console.log(evt);
+        world = world.onKeyEvent(evt);
+        world.draw(ctx);
+    });
+};
+window.onload = main;
+</script>
+</body>
+</html>
