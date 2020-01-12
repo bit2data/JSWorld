@@ -189,20 +189,19 @@ UFOWorld.prototype.onKeyEvent = function (evt) {
 	return this;
 };
 //move to library later
-var bigbang = function (wld, sec) {
-	window.world = wld;
+var bigbang = function (world, sec) {
 	window.interval = setInterval(function () {
-		if (window.world.isOver()) {
-			window.world.endOfWorld();
-			clearInterval(window.world)
+		if (world.isOver()) {
+			world.endOfWorld();
+			clearInterval(window.interval);
 		} else {
-			window.world.draw();
-			window.world = window.world.move.bind(window.world)();
+			world.draw();
+			world = world.move();
 		}
 	}, sec*1000);
-	if (window.world.onKeyEvent) {
+	if (world.onKeyEvent) {
 		document.addEventListener("keydown", function (evt) { 
-			window.world = window.world.onKeyEvent.bind(window.world)(evt); 
+			world = world.onKeyEvent(evt); 
 		});
 	} else {
 		throw Error("no key handler");

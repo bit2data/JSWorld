@@ -170,20 +170,19 @@ Shots.prototype.move = function (w) {
 Shots.prototype.hit = function (ufo) {
 	return this.first.hit(ufo) || this.rest.hit(ufo);
 };
-var bigbang = function (wld, sec) {
-	window.world = wld;
+var bigbang = function (world, sec) {
 	window.interval = setInterval(function () {
-		if (window.world.isOver()) {
-			window.world.endOfWorld();
-			clearInterval(window.world)
+		if (world.isOver()) {
+			world.endOfWorld();
+			clearInterval(window.interval);
 		} else {
-			window.world.draw();
-			window.world = window.world.move.bind(window.world)();
+			world.draw();
+			world = world.move();
 		}
 	}, sec*1000);
 };
 window.onload = function () {
-    console.log("Let there be light!");
+    console.log("start");
     bigbang(WorldExample(), 0.1);
 };
 </script>
