@@ -245,7 +245,7 @@ Pit.prototype.isOver = function () {
     return this.snake.collidingWall() || this.snake.collidingSelf();
 };
 // -> Pit
-Pit.prototype.endOfWorld = function (ctx) {
+Pit.prototype.endOfWorld = function (ctx, count) {
     ctx.fillStyle = "black";
     writeInCenter("Game Over", ctx, Pit.WIDTH, Pit.HEIGHT);
     return this;
@@ -302,7 +302,7 @@ var bigbang = function (world, sec, canvas) {
         console.log("interval world", world);
         counter += 1;
 		if (world.isOver()) {
-			world.endOfWorld(ctx);
+			world.endOfWorld(ctx, counter);
 			clearInterval(window.interval);
 		} else {
             ctx.clearRect(0,0,canvas.width,canvas.height);
