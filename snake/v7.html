@@ -115,40 +115,13 @@ Pit.prototype.onKeyEvent = function (evt) {
     if (-1 < evt.key.indexOf("Arrow")) {
         return this.directSnake(evt.key.substring("Arrow".length).toLowerCase());
     }
-    //before implementing 'world changes on tick'
-    //do some manual simulation to aid debug
-    if ("s" === evt.key) {
-        console.log("slither snake");
-        return new Pit(this.snake.slither(), this.foods);
-    }
-     if ("g" === evt.key) {
-        console.log("grow snake");
-        return new Pit(this.snake.grow(), this.foods);
-    }
-   if ("e" === evt.key) {
-        console.log("eat food");
-        var edible = this.snake.canEat(this.foods);
-        if (-1 < edible) {
-            return new Pit(this.snake.grow(), this.snake.eat(this.foods, edible));
-        }
-        return new Pit(this.snake, this.foods);
-    }
     return this;
 };
 // String -> Pit
 // "up"   -> Pit(Snake("up", [Seg]), [Food])
 Pit.prototype.directSnake = function (dir) {
     console.log("change direction to", dir);
-    if (this.snake.dir === {"up":"down", "left":"right",
-    "down":"up","right":"left"}[dir] && this.snake.hasBody()) {
-        return this.stop();
-    } 
     return new Pit(this.snake.changeDir(dir), this.foods);
-};
-// -> Pit
-Pit.prototype.stop = function () {
-    console.log("stop this", this);
-    return this;
 };
 // String -> Snake
 // "up" -> Snake("up", [Seg])
