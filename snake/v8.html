@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<title>Snake</title>
+<style type="text/css">
+</style>
+</head>
+<body>
+<div id="mainContent" align="center">
+ <canvas width="300" height="300" id="theCanvans" style="border: 1px solid black;">canvas</canvas>
+</div>
+<script>
+//Global Constants
+var SIZE = 30;// think SIZE by SIZE grid
+var SEG_SIZE = 10;//in pix. SIZE*Seg.SIZE == width, height of canvas
+var WIDTH = SIZE * SEG_SIZE;
+var HEIGHT = SIZE * SEG_SIZE;
+var DIRECTIONS = new Set(["up", "down", "left", "right"]);
+// Constructors
+var Pit = function (snake, foods) {
+    this.snake = snake;
+    this.foods = 0 < foods.length ? foods : [new Food(), new Food(), new Food()];
+};
+Pit.SIZE = SIZE;
+var Snake = function (dir, segs) {
+    if (DIRECTIONS.has(dir)) {
+        this.dir = dir;// one of "up" "down" "left" "right"
+    } else {
+        throw "invalid direction " + dir;
+    }
+    if (segs === undefined || segs.length == 0) {
+        throw "empty segs";
+    }
+    this.segs = segs;//[Seg]
+};
+var Food = function (loc) {
+    this.x = loc ? loc.x : randInt(Pit.SIZE);
+    this.y = loc ? loc.y : randInt(Pit.SIZE);
+};
+var randInt = function (max) {
+  return Math.floor(Math.random() * Math.floor(max));
+};
+// Draw to Canvas
+var writeInCenter = function (txt, ctx, width, height) {
+    var txtwidth = ctx.measureText(txt).width;
+    ctx.fillText(txt,(width/2)-(txtwidth/2), height/2);
+};
+Pit.WIDTH = WIDTH;
+Pit.HEIGHT = HEIGHT;
+// ctx -> ctx
+// not clear what makes the best return value, returning ctx can lead to composing draw functions
+Pit.prototype.draw = function (ctx) {
+    ctx.save();
+        this.snake.draw(ctx);
+        this.foods.forEach(function (food) {
+            food.draw(ctx);
+        });
+    ctx.restore();
+    return ctx;
+};
+// ctx -> ctx
+Snake.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(255,165,0,1)";
+        this.segs.forEach(function (seg, i) {
+            ctx.rect(seg.x*Seg.SIZE, seg.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+            ctx.fill();
+        });
+        var head = this.segs[0];
+        ctx.clearRect(head.x*Seg.SIZE, head.y*Seg.SIZE, Seg.SIZE, Seg.SIZE);
+        ctx.beginPath();
+        ctx.fillStyle = 'black';
+        if (this.dir === "up") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        if (this.dir === "down") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE/2, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+        }
+        if (this.dir === "right") {
+            ctx.moveTo(head.x*Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+        }
+        if (this.dir === "left") {
+            ctx.moveTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE);
+            ctx.lineTo(head.x*Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE/2);
+            ctx.lineTo(head.x*Seg.SIZE+Seg.SIZE, head.y*Seg.SIZE+Seg.SIZE);
+        }
+        ctx.closePath();
+        ctx.fill();
+    ctx.restore();
+    return ctx;
+};
+// ctx -> ctx
+Food.prototype.draw = function (ctx) {
+    ctx.save();
+	    ctx.fillStyle = "rgba(0,255,0,1)";
+        ctx.beginPath();
+        //translate the center of the circle to the middle
+        ctx.arc(this.x*Seg.SIZE+Seg.SIZE/2,
+        this.y*Seg.SIZE+Seg.SIZE/2,
+        Seg.SIZE/2,0,Math.PI * 2,false);
+        ctx.fill();
+    ctx.restore();
+    return ctx;
+};
+//key pressed -> change direction
+Pit.prototype.onKeyEvent = function (evt) {
+    console.log(evt.key, this);
+    if (-1 < evt.key.indexOf("Arrow")) {
+        return this.directSnake(evt.key.substring("Arrow".length).toLowerCase());
+    }
+    return this;
+};
+// String -> Pit
+// "up"   -> Pit(Snake("up", [Seg]), [Food])
+Pit.prototype.directSnake = function (dir) {
+    console.log("change direction to", dir);
+    return new Pit(this.snake.changeDir(dir), this.foods);
+};
+// String -> Snake
+// "up" -> Snake("up", [Seg])
+Snake.prototype.changeDir = function (dir) {
+    return new Snake(dir, this.segs);
+};
+// -> Seg
+Snake.prototype.head = function () {
+    return this.segs[0];
+};
+// -> [Seg]
+Snake.prototype.body = function () {
+    return this.segs.slice(1);
+};
+// -> Bool
+Snake.prototype.hasBody = function () {
+    return 1 < this.segs.length;// first one is head
+};
+// -> [Seg]
+Snake.prototype.allButLast = function () {
+    return this.segs.slice(0,-1);
+};
+var Seg = function (xy) {
+    this.x = xy.x;
+    this.y = xy.y;
+};
+Seg.SIZE = SEG_SIZE;
+// Tick tock
+// the world changes overtime
+// snake slithers, eats, and grows
+// -> Snake
+Snake.prototype.slither = function () {
+    return new Snake(this.dir,
+    [this.nextHead()].concat(this.allButLast()));
+};
+// -> Snake
+Snake.prototype.grow = function () {
+    return new Snake(this.dir,
+    [this.nextHead()].concat(this.segs));
+};
+// Foods -> Int
+// index of the food that can be eaten i.e. food location and the head location are identical
+// -1 means there is no food 
+Snake.prototype.canEat = function (foods) {
+    return foods.findIndex(food => food.x === this.head().x && food.y === this.head().y);
+};
+// Foods Int -> Foods
+Snake.prototype.eat = function (foods, i) {
+    return foods.filter((food, index) => {
+        return i !== index;
+    });
+};
+// -> Seg
+Snake.prototype.nextHead = function () {
+    return this.head()[this.dir]();
+};
+// -> Seg
+Seg.prototype.up = function () {
+    return new Seg({
+        x:this.x,
+        y:this.y-1
+    });
+};
+Seg.prototype.down = function () {
+    return new Seg({
+        x:this.x,
+        y:this.y+1
+    });
+};
+Seg.prototype.left = function () {
+    return new Seg({
+        x:this.x-1,
+        y:this.y
+    });
+};
+Seg.prototype.right = function () {
+    return new Seg({
+        x:this.x+1,
+        y:this.y
+    });
+};
+// world changes over time
+// Int -> Pit
+Pit.prototype.onTick = function (counter) {
+    // v8 
+    // food first
+    // otherwise safe place; this could lead to trouble if the body gets too large
+    var edible = this.snake.canEat(this.foods);
+    if (-1 < edible) {
+        return new Pit(this.snake.grow(), this.snake.eat(this.foods, edible));
+    }
+    // if food is ahead, go ahead,
+    // look for food to the left and then right
+    // if not wall ahead, go ahead,
+    // look for wall to the left and then right
+    if (this.foodAhead(1)) return this.nudgeSnake(); // interesting bug, can get into situation where it keeps changing directions, possible fix is to increase the steps here
+    var leftTurn = function (dir) {
+        return {
+            "up": "left",
+            "down": "right",
+            "left": "down",
+            "right": "up"
+        }[dir];
+    };
+    var rightTurn = function (dir) {
+        return {
+            "up": "right",
+            "down": "left",
+            "left": "up",
+            "right": "down"
+        }[dir];
+    };
+    //left eye dominant
+    if (this.directSnake(leftTurn(this.snake.dir)).foodAhead(15)) return this.directSnake(leftTurn(this.snake.dir));
+    if (this.directSnake(rightTurn(this.snake.dir)).foodAhead(5)) return this.directSnake(rightTurn(this.snake.dir));
+    // no food found, look for safe directions
+    if (!this.nudgeSnake().isOver()) return this.nudgeSnake();
+    // right footed (prefers to turn left)
+    if (!this.directSnake(leftTurn(this.snake.dir)).nudgeSnake().isOver()) return this.directSnake(leftTurn(this.snake.dir));
+    if (!this.directSnake(rightTurn(this.snake.dir)).nudgeSnake().isOver()) return this.directSnake(rightTurn(this.snake.dir));
+    return this;//should not happen
+};
+//v8 intelligence requires anticipation and vision 
+// -> Pit
+Pit.prototype.nudgeSnake = function () {
+    return new Pit(this.snake.slither(), this.foods);
+};
+// -> Bool 
+Pit.prototype.foodAhead = function (steps) {
+    if (steps < 0) return false;
+    if (-1 < this.snake.canEat(this.foods)) return true;
+    return this.nudgeSnake().foodAhead(steps-1);
+};
+// End Game
+// -> Bool
+Pit.prototype.isOver = function () {
+    return this.snake.collidingWall() || this.snake.collidingSelf();
+};
+// -> Pit
+Pit.prototype.endOfWorld = function (ctx, count) {
+    ctx.fillStyle = "black";
+    writeInCenter("Game Over", ctx, Pit.WIDTH, Pit.HEIGHT);
+    return this;
+}; 
+// -> Bool
+Snake.prototype.collidingWall = function () {
+    return this.head().x < 0 || Pit.SIZE <= this.head().x || this.head().y < 0 || Pit.SIZE <= this.head().y;
+};
+// -> Bool
+Snake.prototype.collidingSelf = function () {
+    return -1 < this.body().findIndex(seg => seg.x === this.head().x && seg.y === this.head().y);
+};
+// Tests
+var tests = function () {
+    var snake0 = new Snake("up", [
+        new Seg({x:1, y:1}), 
+        new Seg({x:1, y:2}), 
+        new Seg({x:1, y:3}) 
+    ]);
+    var edible = [
+        new Food(),
+        new Food({x:1, y:1}),
+        new Food()
+    ];
+    var deadsnake = new Snake("up", [
+        new Seg({x:1, y:3}), 
+        new Seg({x:2, y:3}), 
+        new Seg({x:3, y:3}), 
+        new Seg({x:4, y:3}), 
+        new Seg({x:4, y:2}), 
+        new Seg({x:4, y:1}), 
+        new Seg({x:3, y:1}), 
+        new Seg({x:2, y:1}), 
+        new Seg({x:1, y:1}), 
+        new Seg({x:1, y:2}), 
+        new Seg({x:1, y:3}), 
+        new Seg({x:1, y:4}) 
+    ]);
+    console.assert(snake0.segs.length === snake0.slither().segs.length, "size should not change after slither");
+    console.assert(snake0.segs.length+1 === snake0.grow().segs.length, "size should grow after grow");
+    console.assert(1 === snake0.canEat(edible), "edible");
+    console.assert(2 === snake0.eat(edible, snake0.canEat(edible)).length, "left over");
+    console.assert(deadsnake.collidingSelf());
+    console.assert(new Pit(snake0, edible).foodAhead(3), "food nearby");
+    var snake1 = new Snake("right", [
+        new Seg({x:1, y:1}), 
+        new Seg({x:1, y:2}), 
+        new Seg({x:1, y:3}) 
+    ]);
+    var edible1= [
+        new Food(),
+        new Food({x:5, y:1}),
+        new Food()
+    ];
+    console.assert(new Pit(snake1, edible1).foodAhead(5), "food is near by");
+ 
+    console.log("All tests finished");
+};
+// hopefully this is the only place we mutate stuff
+var bigbang = function (world, sec, canvas) {
+    console.assert(canvas.width === world.constructor.WIDTH, "incorrect WIDTH");
+    console.assert(canvas.height === world.constructor.HEIGHT, "incorrect HEIGHT");
+    var counter = 0;
+    var ctx = canvas.getContext("2d");
+    world.draw(ctx);
+	window.interval = setInterval(function () {
+        console.log("interval world", world);
+        counter += 1;
+		if (world.isOver()) {
+			world.endOfWorld(ctx, counter);
+			clearInterval(window.interval);
+		} else {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+			world.draw(ctx);
+			world = world.onTick(counter);
+		}
+	}, sec*1000);
+	if (world.onKeyEvent) {
+		document.addEventListener("keydown", function (evt) { 
+            console.log("event handler world", world, world.onKeyEvent);
+			world = world.onKeyEvent(evt); 
+		});
+	} else {
+		throw Error("no key handler");
+	}
+};
+var main = function () {
+    console.log("ready");
+    tests();
+    var canvas = document.getElementById("theCanvans");
+    //window.world instead of var world s.t. can do inspection in the console
+    window.world = new Pit(
+        new Snake("right", [new Seg({x:2,y:1}), new Seg({x:1,y:1})]),
+        [new Food(), new Food(), new Food(), new Food()]
+    );
+    bigbang(window.world, 0.5, canvas);
+};
+window.onload = main;
+</script>
+</body>
+</html>
